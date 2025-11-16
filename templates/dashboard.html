@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 电商产品管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-tachometer-alt"></i> 仪表板</h2>
+</div>
+
+<!-- 功能菜单 - 网格布局 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-tools"></i> 功能菜单</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- 产品相关功能 -->
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                        <div class="card h-100 text-center product-card">
+                            <div class="card-body">
+                                <i class="fas fa-boxes fa-3x text-primary mb-2"></i>
+                                <h6>产品查询</h6>
+                                <p class="text-muted small">查看、搜索和管理所有产品信息</p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('products')}}" class="btn btn-primary btn-sm w-100">进入产品管理</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 修改密码 -->
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                        <div class="card h-100 text-center password-card">
+                            <div class="card-body">
+                                <i class="fas fa-key fa-3x text-warning mb-2"></i>
+                                <h6>修改密码</h6>
+                                <p class="text-muted small">更改您的登录密码</p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('change_password') }}" class="btn btn-warning btn-sm w-100">修改密码</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 仅管理员可见的功能 -->
+                    {% if session.is_admin %}
+                    <!-- 新增用户 -->
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                        <div class="card h-100 text-center user-card">
+                            <div class="card-body">
+                                <i class="fas fa-user-plus fa-3x text-success mb-2"></i>
+                                <h6>新增用户</h6>
+                                <p class="text-muted small">添加新的系统用户账户</p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('add_user') }}" class="btn btn-success btn-sm w-100">新增用户</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 管理面板 -->
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                        <div class="card h-100 text-center admin-card">
+                            <div class="card-body">
+                                <i class="fas fa-cogs fa-3x text-info mb-2"></i>
+                                <h6>管理面板</h6>
+                                <p class="text-muted small">系统管理、用户权限和统计信息</p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('admin_panel') }}" class="btn btn-info btn-sm w-100">管理面板</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- 产品管理快捷入口 -->
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                        <div class="card h-100 text-center add-product-card">
+                            <div class="card-body">
+                                <i class="fas fa-plus fa-3x text-success mb-2"></i>
+                                <h6>新增产品</h6>
+                                <p class="text-muted small">添加新的产品信息</p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('add_product') }}" class="btn btn-success btn-sm w-100">新增产品</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计信息卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-boxes fa-2x mb-2"></i>
+                <h3>{{ total_products }}</h3>
+                <p>总产品数</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-user fa-2x mb-2"></i>
+                <h3>{{ session.username }}</h3>
+                <p>当前用户</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3>
+                    {% if session.is_admin %}管理员{% elif '开发者' in session.groups %}开发者{% else %}普通用户{% endif %}
+                </h3>
+                <p>用户类型</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                <h3>
+                    {% if session.is_admin %}是{% else %}否{% endif %}
+                </h3>
+                <p>管理员权限</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近产品 -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-clock"></i> 最近添加的产品</h5>
+    </div>
+    <div class="card-body">
+        {% if recent_products %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>产品名称</th>
+                        <th>SKU</th>
+                        <th>成本</th>
+                        <th>分类</th>
+                        <th>开发者ID</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in recent_products %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.sku }}</td>
+                        <td>¥{{ "%.2f"|format(product.cost) }}</td>
+                        <td>{{ product.category }}</td>
+                        <td>{{ product.developer_id }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                    onclick="loadProductDetails('{{ product.uid }}')"
+                                    data-bs-toggle="modal" data-bs-target="#productModal">
+                                <i class="fas fa-eye"></i> 查看详情
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">暂无产品数据</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 快速操作提示 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-lightbulb"></i> 快速操作提示</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-arrow-right text-primary me-2"></i> <a href="{{ url_for('products') }}" class="text-decoration-none">查看和管理所有产品</a></li>
+                        <li><i class="fas fa-arrow-right text-primary me-2"></i> <a href="{{ url_for('change_password') }}" class="text-decoration-none">修改您的登录密码</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    {% if session.is_admin %}
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-arrow-right text-success me-2"></i> <a href="{{ url_for('add_user') }}" class="text-decoration-none">添加新用户账户</a></li>
+                        <li><i class="fas fa-arrow-right text-info me-2"></i> <a href="{{ url_for('admin_panel') }}" class="text-decoration-none">系统管理设置</a></li>
+                        <li><i class="fas fa-arrow-right text-success me-2"></i> <a href="{{ url_for('add_product') }}" class="text-decoration-none">添加新产品信息</a></li>
+                    </ul>
+                    {% else %}
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-arrow-right text-success me-2"></i> <a href="{{ url_for('add_product') }}" class="text-decoration-none">添加新产品信息</a></li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function loadProductDetails(uid) {
+    fetch(`/api/product/${uid}`)
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || '获取产品详情失败');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            displayProductDetails(data);
+        })
+        .catch(error => {
+            document.getElementById('productDetails').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function displayProductDetails(product) {
+    const detailsHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>基本信息</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>产品名称</strong></td><td>${product.name}</td></tr>
+                    <tr><td><strong>短名称</strong></td><td>${product.short_name || '无'}</td></tr>
+                    <tr><td><strong>SKU</strong></td><td>${product.sku}</td></tr>
+                    <tr><td><strong>成本</strong></td><td>¥${product.cost.toFixed(2)}</td></tr>
+                    <tr><td><strong>分类</strong></td><td>${product.category}</td></tr>
+                    <tr><td><strong>开发者ID</strong></td><td>${product.developer_id}</td></tr>
+                    <tr><td><strong>创建时间</strong></td><td>${product.created_at}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>权限信息</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>权限组ID</strong></td><td>${product.permission_group_id || '无'}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        ${product.aliases && product.aliases.length > 0 ? `
+        <div class="mt-4">
+            <h6>产品别名</h6>
+            <ul class="list-group">
+                ${product.aliases.map(alias => `<li class="list-group-item">${alias.alias}</li>`).join('')}
+            </ul>
+        </div>
+        ` : ''}
+
+        ${product.images && product.images.length > 0 ? `
+        <div class="mt-4">
+            <h6>产品图片</h6>
+            <div class="row">
+                ${product.images.map(img => `
+                    <div class="col-md-3 mb-2">
+                        <img src="${img.image_url}" class="img-thumbnail" style="max-height: 100px; object-fit: contain;" alt="产品图片">
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        ` : ''}
+
+        ${product.packages && product.packages.length > 0 ? `
+        <div class="mt-4">
+            <h6>包装信息</h6>
+            <table class="table table-sm">
+                ${product.packages.map(pkg => `
+                    <tr>
+                        <td><strong>尺寸</strong></td><td>${pkg.length} × ${pkg.width} × ${pkg.height} cm</td>
+                    </tr>
+                    <tr>
+                        <td><strong>重量</strong></td><td>${pkg.weight} kg</td>
+                    </tr>
+                    <tr>
+                        <td><strong>描述</strong></td><td>${pkg.description || '无'}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        </div>
+        ` : ''}
+
+        ${product.links && product.links.length > 0 ? `
+        <div class="mt-4">
+            <h6>产品链接</h6>
+            <table class="table table-sm">
+                ${product.links.map(link => `
+                    <tr>
+                        <td><strong>平台</strong></td><td>${link.platform}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>店铺</strong></td><td>${link.shop}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>标题</strong></td><td>${link.title}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>价格类型</strong></td><td>${link.price_type}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>价格</strong></td><td>¥${link.price.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>上架时间</strong></td><td>${link.listing_time}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>上架人</strong></td><td>${link.listed_by_name || '未知'}</td>
+                    </tr>
+                    <tr><td colspan="2"><hr></td></tr>
+                `).join('')}
+            </table>
+        </div>
+        ` : ''}
+    `;
+
+    document.getElementById('productDetails').innerHTML = detailsHtml;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}删除产品 - 电商产品管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-trash"></i> 删除产品</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle"></i> 确认删除</h5>
+            <p>您确定要删除以下产品吗？此操作不可撤销！</p>
+        </div>
+
+        <div class="card border-danger mb-4">
+            <div class="card-body">
+                <h6 class="card-title">{{ product.name }}</h6>
+                <p class="card-text">
+                    <strong>产品UID:</strong> {{ product.uid }}<br>
+                    <strong>SKU:</strong> {{ product.sku }}<br>
+                    <strong>成本:</strong> ¥{{ "%.2f"|format(product.cost) }}<br>
+                    <strong>分类:</strong> {{ product.category }}<br>
+                    <strong>创建时间:</strong> {{ product.created_at[:19].replace('T', ' ') }}
+                </p>
+            </div>
+        </div>
+
+        <form method="POST">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">确认删除</button>
+                <a href="{{ url_for('products') }}" class="btn btn-outline-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

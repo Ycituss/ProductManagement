@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品查询系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .search-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .product-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            height: 100%;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .product-image {
+            height: 200px;
+            object-fit: cover;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .product-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-sku {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .product-price {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .product-info {
+            font-size: 0.85rem;
+            color: #777;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .pagination-section {
+            margin-top: 2rem;
+        }
+
+        .stats-badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 搜索区域 -->
+    <div class="search-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-search me-2"></i>商品查询系统</h1>
+                    <p class="lead mb-0">快速查找您需要的商品信息</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="stats-badge d-inline-block">
+                        <i class="fas fa-box me-1"></i>
+                        <span id="totalProducts">0</span> 个商品
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 搜索表单 -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <form id="searchForm">
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label for="productName" class="form-label">商品名称</label>
+                                    <input type="text" class="form-control" id="productName"
+                                           placeholder="输入商品名称...">
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="productAbbr" class="form-label">商品简称</label>
+                                    <input type="text" class="form-control" id="productAbbr"
+                                           placeholder="输入商品简称...">
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search me-1"></i>查询
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载指示器 -->
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在查询商品数据...</p>
+        </div>
+
+        <!-- 商品列表 -->
+        <div id="productsContainer" class="row">
+            <!-- 商品卡片将通过JavaScript动态生成 -->
+        </div>
+
+        <!-- 空状态 -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+            <h4>暂无商品数据</h4>
+            <p>尝试调整搜索条件或刷新页面</p>
+        </div>
+
+        <!-- 分页 -->
+        <div id="paginationSection" class="pagination-section" style="display: none;">
+            <nav>
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled" id="prevPage">
+                        <a class="page-link" href="#" tabindex="-1">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item" id="nextPage">
+                        <a class="page-link" href="#">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+        const pageSize = 12;
+        let totalPages = 1;
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定搜索表单提交事件
+            document.getElementById('searchForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                currentPage = 1;
+                searchProducts();
+            });
+
+            // 初始加载数据
+            searchProducts();
+        });
+
+        // 搜索商品
+        function searchProducts() {
+            const productName = document.getElementById('productName').value;
+            const productAbbr = document.getElementById('productAbbr').value;
+
+            showLoading(true);
+
+            fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_name: productName,
+                    product_abbr: productAbbr,
+                    page: currentPage,
+                    page_size: pageSize
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+
+                if (data.success) {
+                    displayProducts(data.data);
+                    updatePagination(data.data);
+                    updateStats(data.data.total);
+                } else {
+                    alert('查询失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                alert('网络错误: ' + error);
+            });
+        }
+
+        // 显示/隐藏加载指示器
+        function showLoading(show) {
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+        }
+
+        // 显示商品列表
+        function displayProducts(data) {
+            const container = document.getElementById('productsContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!data.items || data.items.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            let html = '';
+            data.items.forEach(item => {
+                const fields = item.fields;
+                html += `
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <div class="card product-card">
+                            <img src="${fields.image_url}" class="card-img-top product-image" alt="${fields.商品名称[0].text}">
+                            <div class="card-body">
+                                <h5 class="card-title product-title">${fields.商品名称[0].text}</h5>
+                                <p class="card-text product-sku">
+                                    <small class="text-muted">SKU: ${fields.商品SKU[0].text}</small>
+                                </p>
+                                <p class="card-text product-price">¥${fields.商品成本}</p>
+                                <div class="product-info">
+                                    <p><strong>简称:</strong> ${fields.商品简称[0].text}</p>
+                                    <p><strong>ID:</strong> ${fields.商品唯一标识}</p>
+                                    <p><strong>创建:</strong> ${fields.创建时间格式化}</p>
+                                    <p><strong>更新:</strong> ${fields.更新时间格式化}</p>
+                                    <p><strong>创建人:</strong> ${fields.创建人[0].text}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 更新分页
+        function updatePagination(data) {
+            const paginationSection = document.getElementById('paginationSection');
+            const prevPage = document.getElementById('prevPage');
+            const nextPage = document.getElementById('nextPage');
+
+            totalPages = Math.ceil(data.total / pageSize);
+
+            if (totalPages <= 1) {
+                paginationSection.style.display = 'none';
+                return;
+            }
+
+            paginationSection.style.display = 'block';
+
+            // 更新上一页状态
+            prevPage.classList.toggle('disabled', currentPage === 1);
+            prevPage.onclick = currentPage > 1 ? (() => {
+                currentPage--;
+                searchProducts();
+            }) : null;
+
+            // 更新下一页状态
+            nextPage.classList.toggle('disabled', currentPage === totalPages || !data.has_more);
+            nextPage.onclick = (currentPage < totalPages && data.has_more) ? (() => {
+                currentPage++;
+                searchProducts();
+            }) : null;
+
+            // 更新页码显示（简化版，实际可以显示更多页码）
+            const pageItems = document.querySelectorAll('.pagination .page-item:not(:first-child):not(:last-child)');
+            pageItems[0].querySelector('.page-link').textContent = currentPage;
+        }
+
+        // 更新统计信息
+        function updateStats(total) {
+            document.getElementById('totalProducts').textContent = total;
+        }
+    </script>
+</body>
+</html>

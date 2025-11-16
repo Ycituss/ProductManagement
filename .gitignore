@@ -1,0 +1,5 @@
+__pycache__/
+backups/
+static/uploads/
+key.py
+*.db
