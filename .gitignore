@@ -3,3 +3,5 @@ backups/
 static/uploads/
 key.py
 *.db
+static/lingxing/*
+!static/lingxing/lingxing.xlsx

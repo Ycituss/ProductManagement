@@ -6,6 +6,9 @@ import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
+import random
+import openpyxl
+
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
@@ -13,7 +16,7 @@ import pytz
 import tencent_cos
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, \
-    send_from_directory, send_file
+    send_from_directory, send_file, render_template_string
 import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -23,6 +26,9 @@ from pypinyin import lazy_pinyin
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # 请更改为安全的随机密钥，建议使用环境变量
+
+# Base62字符集（0-9, a-z, A-Z）
+BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # 配置上传文件夹
 UPLOAD_FOLDER = 'static/uploads'
@@ -205,10 +211,35 @@ def allowed_file_3mf(filename):
 
 
 # 生成基于时间戳和UUID的唯一标识符
+def base62_encode(num):
+    """将整数编码为Base62字符串"""
+    if num == 0:
+        return BASE62[0]
+
+    arr = []
+    base = 62
+    while num:
+        num, rem = divmod(num, base)
+        arr.append(BASE62[rem])
+
+    # 反转数组并连接成字符串
+    return ''.join(arr[::-1])
+
+
 def generate_product_uid():
-    timestamp = int(time.time())  # 当前时间戳
-    unique_id = uuid.uuid4().hex[:6]  # UUID的前6位
-    return f"PRD-{timestamp}-{unique_id.upper()}"
+    """生成11字符的唯一产品标识符：P + 4字符Base62时间戳 + 6字符随机字符串"""
+    # 获取当前时间戳并编码为Base62（4字符）
+    timestamp = int(time.time())
+    ts_encoded = base62_encode(timestamp)
+
+    # 确保时间戳编码为4字符（不足时填充）
+    ts_part = ts_encoded.zfill(4)[-4:]
+
+    # 生成6字符随机字符串
+    random_part = ''.join(random.choices(BASE62, k=6))
+
+    # 组合成最终标识符
+    return f"P{ts_part}{random_part}"
 
 # ===== 备份数据库函数 =====
 def backup_database():
@@ -1528,6 +1559,112 @@ def get_image_link(image_id):
 
     return image_link['image_url']
 
+@app.route('/get_lingxing_excel_jump/<string:uid>')
+def get_lingxing_excel_jump(uid):
+    """
+       返回一个自动下载 Excel 文件并跳转的页面
+       """
+    # 手动生成真实的下载 URL
+    download_url = url_for('get_lingxing_excel', uid=uid, _external=False)
+
+    # 使用 render_template_string 来安全地插入 URL
+    html = f'''
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <script>
+            // 下载文件
+            var a = document.createElement('a');
+            a.href = '{download_url}';
+            a.download = true;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // 打开新标签页
+            window.open('https://erp.lingxing.com/erp/productManage', '_blank');
+
+            // ✅ 因为当前窗口是 JS 打开的，可以关闭
+            setTimeout(function() {{
+              window.close();  // 安全！
+            }}, 2000);  // 等2秒确保下载和跳转完成
+          </script>
+        </body>
+        </html>
+        '''
+    # print(html)  # 调试：查看输出是否正确
+    return render_template_string(html)
+
+@app.route('/get_lingxing_excel/<string:uid>')
+@login_required
+def get_lingxing_excel(uid):
+    conn = get_db_connection()
+    product = conn.execute('''
+            SELECT *
+            FROM products
+            WHERE uid = ?
+        ''', (uid,)).fetchone()
+    product_image = conn.execute('''
+                SELECT *
+                FROM product_images
+                WHERE product_uid = ?
+            ''', (uid,)).fetchone()
+    if product_image:
+        product_image_link = conn.execute('''
+                        SELECT *
+                        FROM product_images_cos
+                        WHERE image_id = ?
+                    ''', (product_image['id'],)).fetchone()
+    product_package = conn.execute('''
+                    SELECT *
+                    FROM product_packages
+                    WHERE product_uid = ?
+                ''', (uid,)).fetchone()
+    conn.close()
+
+    name = product['name']
+    cost = product['cost']
+    if product_image_link:
+        image = product_image_link['image_url']
+    else:
+        image = ''
+    if product_package:
+        length = product_package['length']
+        width = product_package['width']
+        height = product_package['height']
+        weight = product_package['weight']
+    else:
+        length = ''
+        width = ''
+        height = ''
+        weight = ''
+
+    source_file = './static/lingxing/lingxing.xlsx'
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    target_file = f'./static/lingxing/{name}_{timestamp}.xlsx'
+    shutil.copy(source_file, target_file)
+    workbook = openpyxl.load_workbook(target_file)
+
+    sheet_product = workbook['产品']
+
+    sheet_product['A2'] = uid
+    sheet_product['B2'] = name
+    sheet_product['Y2'] = cost
+    sheet_product['V2'] = image
+    sheet_product['AI2'] = length
+    sheet_product['AJ2'] = width
+    sheet_product['AK2'] = height
+    sheet_product['AL2'] = 'cm'
+    sheet_product['AG2'] = weight
+    sheet_product['AH2'] = 'g'
+
+    workbook.save(target_file)
+
+    return send_file(
+                    target_file,
+                    as_attachment=True,  # 强制下载而非预览
+                    download_name=f'{name}_{timestamp}.xlsx',  # 浏览器显示的文件名
+                )
 
 if __name__ == '__main__':
     init_database()

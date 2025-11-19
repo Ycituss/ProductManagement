@@ -555,10 +555,11 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                        <a href="{{ url_for('get_lingxing_excel_jump', uid=product.uid) }}" target="_blank" onclick="return startDownload(event, {{product.uid}})" class="btn btn-primary">导出领星表格</a>
                         {% if session.is_admin or product.developer_id == session.user_id %}
                         <a href="{{ url_for('edit_product', uid=product.uid) }}" class="btn btn-primary">修改产品</a>
                         {% endif %}
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                     </div>
                 </div>
             </div>
@@ -801,6 +802,18 @@ function showToast(message, type = 'info') {
             toast.parentNode.removeChild(toast);
         }
     }, 3000);
+}
+function startDownload(event, uid) {
+    // 阻止 <a> 的默认跳转行为
+    event.preventDefault();
+
+    // 用 window.open 打开（关键！这样才可以用 close）
+    var downloadWin = window.open('/get_lingxing_excel_Jump/' + uid, '_blank');
+
+    // 可选：如果需要反馈状态，可以在这里设置
+    // downloadWin.focus(); // 聚焦新窗口
+
+    return false; // 双重保险，阻止默认行为
 }
 </script>
 {% endblock %}
