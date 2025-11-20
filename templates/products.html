@@ -111,7 +111,7 @@
             </div>
         </div>
         <!-- 添加图片模态框 -->
-        <div class="modal fade" id="addImageModal{{ product.uid }}" tabindex="-1" aria-labelledby="addImageModalLabel{{ product.uid }}" aria-hidden="true">
+        <div class="modal fade second-modal" id="addImageModal{{ product.uid }}" tabindex="-1" aria-labelledby="addImageModalLabel{{ product.uid }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -149,7 +149,7 @@
         </div>
 
         <!-- 添加附件模态框 -->
-        <div class="modal fade" id="addFileModal{{ product.uid }}" tabindex="-1" aria-labelledby="addFileModalLabel{{ product.uid }}" aria-hidden="true">
+        <div class="modal fade second-modal" id="addFileModal{{ product.uid }}" tabindex="-1" aria-labelledby="addFileModalLabel{{ product.uid }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -187,7 +187,7 @@
         </div>
 
         <!-- 新增链接模态框 -->
-        <div class="modal fade" id="addLinkModal{{ product.uid }}" tabindex="-1" aria-labelledby="addLinkModalLabel{{ product.uid }} aria-hidden="true">
+        <div class="modal fade second-modal" id="addLinkModal{{ product.uid }}" tabindex="-1" aria-labelledby="addLinkModalLabel{{ product.uid }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -233,7 +233,7 @@
                                 <input type="number" step="0.01" class="form-control" id="price" name="price" required>
                             </div>
                             <div class="mb-3">
-                                <label for="platform_skc" class="form-label">平台 SPU *</label>
+                                <label for="platform_skc" class="form-label">平台 SKU ID *</label>
                                 <input type="text" class="form-control" id="platform_skc" name="platform_skc" required>
                             </div>
                             <div class="d-flex justify-content-end">
@@ -247,7 +247,7 @@
         </div>
 
         <!-- 新增包装规格模态框 -->
-        <div class="modal fade" id="addPackageModal{{ product.uid }}" tabindex="-1" aria-labelledby="addPackageModalLabel{{ product.uid }} aria-hidden="true">
+        <div class="modal fade second-modal" id="addPackageModal{{ product.uid }}" tabindex="-1" aria-labelledby="addPackageModalLabel{{ product.uid }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -292,7 +292,7 @@
         </div>
 
         <!-- 查看所有包装规格模态框 -->
-        <div class="modal fade" id="showPackageModal{{ product.uid }}" tabindex="-1" aria-labelledby="showPackageModalLabel{{ product.uid }} aria-hidden="true">
+        <div class="modal fade second-modal" id="showPackageModal{{ product.uid }}" tabindex="-1" aria-labelledby="showPackageModalLabel{{ product.uid }}" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -343,7 +343,7 @@
 
 
         <!-- 详情模态框 -->
-        <div class="modal fade" id="detailModal{{ loop.index }}" tabindex="-1" aria-labelledby="detailModalLabel{{ loop.index }}" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal fade first-modal" id="detailModal{{ loop.index }}" tabindex="-1" aria-labelledby="detailModalLabel{{ loop.index }}" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -399,7 +399,7 @@
                                 <!-- 添加图片按钮 -->
                                 <div class="mt-3">
                                     {% if session.is_admin or product.developer_id == session.user_id %}
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addImageModal{{ product.uid }}">
+                                    <button type="button" class="btn btn-success btn-sm open-second" data-bs-toggle="modal" data-bs-target="#addImageModal{{ product.uid }}">
                                         <i class="fas fa-plus"></i> 添加图片
                                     </button>
                                     {% endif %}
@@ -446,7 +446,7 @@
                                 <!-- 添加附件按钮 -->
                                 <div class="mt-3">
                                     {% if session.is_admin or product.developer_id == session.user_id %}
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addFileModal{{ product.uid }}">
+                                    <button type="button" class="btn btn-success btn-sm open-second" data-bs-toggle="modal" data-bs-target="#addFileModal{{ product.uid }}">
                                         <i class="fas fa-plus"></i> 添加模型文件
                                     </button>
                                     {% endif %}
@@ -535,7 +535,7 @@
                                 </dl>
                                 <!-- 新增链接按钮 -->
                                 <div class="mt-3">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLinkModal{{ product.uid }}">
+                                    <button type="button" class="btn btn-success btn-sm open-second" data-bs-toggle="modal" data-bs-target="#addLinkModal{{ product.uid }}">
                                         <i class="fas fa-plus"></i> 新增链接
                                     </button>
                                     <button type="button" class="btn btn-success btn-sm">
@@ -544,10 +544,10 @@
                                 </div>
                                 <!-- 新增包装规格按钮 -->
                                 <div class="mt-3">
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addPackageModal{{ product.uid }}">
+                                    <button type="button" class="btn btn-success btn-sm open-second" data-bs-toggle="modal" data-bs-target="#addPackageModal{{ product.uid }}">
                                         <i class="fas fa-plus"></i> 新增包装规格
                                     </button>
-                                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#showPackageModal{{ product.uid }}">
+                                    <button type="button" class="btn btn-success btn-sm open-second" data-bs-toggle="modal" data-bs-target="#showPackageModal{{ product.uid }}">
                                         <i class="fas"></i> 查看所有包装规格
                                     </button>
                                 </div>
@@ -814,6 +814,30 @@ function startDownload(event, uid) {
     // downloadWin.focus(); // 聚焦新窗口
 
     return false; // 双重保险，阻止默认行为
+}
+</script>
+<script>
+// 等待页面完全加载
+document.addEventListener('DOMContentLoaded', function() {
+    // 使用事件委托监听所有模态框的关闭事件
+    document.addEventListener('hidden.bs.modal', function(event) {
+        // 检查触发事件的元素是否是模态框
+        if (event.target.classList.contains('second-modal')) {
+            console.log('检测到模态框关闭，正在刷新页面...');
+
+            // 添加短暂延迟确保模态框完全关闭
+            setTimeout(function() {
+                // 强制从服务器重新加载页面（避免缓存）
+                window.location.href = window.location.href
+            }, 100);
+        }
+    });
+});
+
+// 如果DOM已经加载完成，直接执行
+if (document.readyState === 'complete') {
+    console.log('页面已加载，直接绑定事件');
+    document.dispatchEvent(new Event('DOMContentLoaded'));
 }
 </script>
 {% endblock %}

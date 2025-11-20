@@ -144,7 +144,7 @@
                                             <input type="number" step="0.01" class="form-control" id="edit_price" name="edit_price" value="{{ link.price }}" required>
                                         </div>
                                         <div class="mb-3">
-                                            <label for="edit_platform_skc" class="form-label">平台 SPU *</label>
+                                            <label for="edit_platform_skc" class="form-label">平台 SKU ID *</label>
                                             <input type="text" class="form-control" id="edit_platform_skc" name="edit_platform_skc" value="{{ link.platform_skc }}" required>
                                         </div>
                                         <div class="d-flex justify-content-end">
@@ -164,7 +164,7 @@
                     <p class="card-text"><strong>价格类型：</strong>{{ link.price_type }}</p>
                     <p class="card-text"><strong>价格：</strong>¥{{ "%.2f"|format(link.price) }}</p>
                     {% if link.platform_skc %}
-                        <p class="card-text"><strong>平台 SPU：</strong>{{ link.platform_skc }}</p>
+                        <p class="card-text"><strong>平台 SKU ID：</strong>{{ link.platform_skc }}</p>
                     {% endif %}
                     <p class="card-text"><strong>上架人：</strong>{{ link.listed_by }}</p>
                     <p class="card-text"><strong>创建时间：</strong>{{ link.created_at }}</p>
