@@ -115,11 +115,14 @@
 <!-- 数据库备份 -->
 <div class="card">
     <div class="card-header">
-        <h5><i class="fas fa-database"></i> 数据库备份</h5>
+        <h5><i class="fas fa-database"></i> 数据备份</h5>
     </div>
     <div class="card-body">
         <a href="{{ url_for('manual_backup') }}" class="btn btn-warning">
             <i class="fas fa-database"></i> 手动备份数据库
+        </a>
+        <a href="{{ url_for('get_lingxing_excel_all') }}" class="btn btn-warning">
+            <i class="fas fa-file-export"></i> 导出所有产品
         </a>
     </div>
 </div>

@@ -261,10 +261,12 @@ def backup_database():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     backup_filename = f"ecommerce_{timestamp}.db"
     backup_path = os.path.join(BACKUP_DIR, backup_filename)
+    backup_path_cos = 'backup/' + backup_filename
 
     try:
         # 执行文件复制（备份）
         shutil.copy2(DB_FILE, backup_path)
+        tencent_cos.upload_to_cos(backup_path, backup_path_cos)
         print(f"[成功] 数据库已备份到：{backup_path}")
         return True, f"数据库已备份到：{backup_path}"
     except Exception as e:
@@ -1666,8 +1668,84 @@ def get_lingxing_excel(uid):
                     download_name=f'{name}_{timestamp}.xlsx',  # 浏览器显示的文件名
                 )
 
+
+@app.route('/get_lingxing_excel_all')
+@login_required
+def get_lingxing_excel_all():
+    conn = get_db_connection()
+
+    # 查询每个产品只取一行数据（每个产品只出现一次）
+    products = conn.execute('''
+        SELECT
+            p.uid,
+            p.name,
+            p.cost,
+            (SELECT pic.image_url
+             FROM product_images pi
+             JOIN product_images_cos pic ON pic.image_id = pi.id
+             WHERE pi.product_uid = p.uid AND pi.is_deleted = 0
+             LIMIT 1) AS image_url,
+
+            (SELECT pp.length FROM product_packages pp WHERE pp.product_uid = p.uid LIMIT 1) AS length,
+            (SELECT pp.width  FROM product_packages pp WHERE pp.product_uid = p.uid LIMIT 1) AS width,
+            (SELECT pp.height FROM product_packages pp WHERE pp.product_uid = p.uid LIMIT 1) AS height,
+            (SELECT pp.weight FROM product_packages pp WHERE pp.product_uid = p.uid LIMIT 1) AS weight
+        FROM products p
+    ''').fetchall()
+
+    if not products:
+        conn.close()
+        return "没有找到任何产品数据", 404
+
+    # 模板文件路径
+    source_file = './static/lingxing/lingxing.xlsx'
+    if not os.path.exists(source_file):
+        conn.close()
+        return "Excel 模板文件 lingxing.xlsx 不存在", 500
+
+    # 生成输出文件路径
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_filename = f'lingxing_all_products_{timestamp}.xlsx'
+    output_path = os.path.join('./static/lingxing/', output_filename)
+
+    # 复制模板
+    shutil.copy(source_file, output_path)
+
+    # 加载 Excel
+    workbook = openpyxl.load_workbook(output_path)
+    sheet = workbook['产品']  # 假设模板中有个叫“产品”的 sheet
+
+    start_row = 2  # 假设第1行为标题行
+
+    for idx, product in enumerate(products):
+        row = start_row + idx
+
+        sheet[f'A{row}'] = product['uid']
+        sheet[f'B{row}'] = product['name']
+        sheet[f'Y{row}'] = product['cost']
+        sheet[f'V{row}'] = product['image_url'] or ''
+
+        sheet[f'AI{row}'] = product['length'] or ''
+        sheet[f'AJ{row}'] = product['width'] or ''
+        sheet[f'AK{row}'] = product['height'] or ''
+        sheet[f'AL{row}'] = 'cm' if any([product['length'], product['width'], product['height']]) else ''
+        sheet[f'AG{row}'] = product['weight'] or ''
+        sheet[f'AH{row}'] = 'g' if product['weight'] else ''
+
+    # 保存并关闭
+    workbook.save(output_path)
+    conn.close()
+
+    # 返回文件
+    return send_file(
+        output_path,
+        as_attachment=True,
+        download_name=output_filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
 if __name__ == '__main__':
     init_database()
     start_scheduler()
     # app.run(debug=True)
-    app.run(host='0.0.0.0')
+    app.run(host='127.0.0.1', port=213)
