@@ -1423,8 +1423,8 @@ def download_file(file_id, file_type, product_uid):
         conn = get_db_connection()
         file = conn.execute('''
                 SELECT image_url, product_uid 
-                FROM product_images AND is_deleted = 0
-                WHERE id = ?
+                FROM product_images 
+                WHERE id = ? AND is_deleted = 0
             ''', (file_id,)).fetchone()
 
         product = conn.execute('''

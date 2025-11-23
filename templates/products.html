@@ -707,8 +707,44 @@
     });
 </script>
 <script>
+function copyImageLinkFromEndpoint(url) {
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
+  const noCacheUrl = url + '?t=' + new Date().getTime();
+
+  fetch(noCacheUrl, { credentials: 'include' })
+    .then(res => res.ok ? res.text() : Promise.reject(`请求失败：${res.status}`))
+    .then(link => {
+      const safeLink = String(link)
+        .trim()
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .replace(/\s+/g, '');
+
+      if (!safeLink) throw new Error('链接为空');
+
+      // 核心：弹窗显示链接，让用户手动复制
+      const result = prompt('链接已加载完成，请手动复制（Ctrl+C）：', safeLink);
+      // prompt 中点击“确定”表示用户已复制，点击“取消”表示未复制
+      if (result !== null) {
+        btn.innerHTML = '<i class="fas fa-check"></i> 复制完成';
+      } else {
+        btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> 已取消';
+      }
+    })
+    .catch(err => {
+      console.error('❌ 失败：', err);
+      btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> 加载失败';
+    })
+    .finally(() => {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-copy"></i> 复制链接';
+      }, 2000);
+    });
+}
 // 通过 AJAX 调用 /get_image_link获取链接，然后复制
-function copyImageLinkFromEndpoint(endpointUrl) {
+function copyImageLinkFromEndpoint1(endpointUrl) {
     fetch(endpointUrl)
         .then(response => {
             if (!response.ok) {
@@ -769,6 +805,38 @@ function fallbackCopyTextToClipboard(text) {
     document.body.removeChild(textarea);
 }
 
+
+async function copyToClipboard(text) {
+    // 优先尝试现代API
+    if (navigator.clipboard) {
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('链接已复制到剪贴板！', 'success');
+            return;
+        } catch (err) {
+            console.warn('现代API失败，降级到传统方式:', err);
+        }
+    }
+
+    // 降级到传统方法
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.cssText = 'position:fixed;opacity:0;';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange?.(0, text.length); // 兼容移动端
+
+    try {
+        const successful = document.execCommand('copy');
+        showToast(successful ? '链接已复制到剪贴板！' : '复制失败，请手动选择',
+                 successful ? 'success' : 'error');
+    } catch (err) {
+        console.error('粘贴板操作失败:', err);
+        showToast('复制失败，请手动选择', 'error');
+    } finally {
+        document.body.removeChild(textarea);
+    }
+}
 // 简单的提示函数
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
