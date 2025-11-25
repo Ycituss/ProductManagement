@@ -663,7 +663,8 @@ def add_product():
 
         name = request.form['name']
         short_name = request.form.get('short_name', '')
-        sku = request.form['sku']
+        # sku = request.form['sku']
+        sku = uid
         cost = float(request.form['cost'])
         developer_id = session['user_id']
         category = request.form['category']
