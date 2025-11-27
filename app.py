@@ -1,6 +1,8 @@
+import io
 import os
 import re
 import shutil
+import tempfile
 import uuid
 import time
 import zipfile
@@ -8,12 +10,15 @@ from io import BytesIO
 from pathlib import Path
 import random
 import openpyxl
+import pandas as pd
 
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import pytz
+from werkzeug.datastructures import FileStorage
 
 import tencent_cos
+import excel_export
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, \
     send_from_directory, send_file, render_template_string
@@ -1744,6 +1749,141 @@ def get_lingxing_excel_all():
         download_name=output_filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+def add_product_bg(name, short_name, danse, duose, image_path):
+    # 自动生成唯一标识符
+    uid = generate_product_uid()
+    sku = uid
+    cost = float(danse*0.15 + danse*0.2)
+    developer_id = session['user_id']
+    category = '1'
+    permission_group_id = 1
+    # 检查SKU是否已存在
+    conn = get_db_connection()
+    existing_sku = conn.execute('SELECT * FROM products WHERE sku = ?', (sku,)).fetchone()
+    existing_name = conn.execute('SELECT * FROM products WHERE name = ?', (name,)).fetchone()
+    if existing_sku or existing_name:
+        return ('产品已存在！', 'error')
+        conn.close()
+    else:
+        try:
+            # 插入产品信息
+            conn.execute('''
+                INSERT INTO products (uid, name, short_name, sku, cost, developer_id, category, permission_group_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (uid, name, short_name, sku, cost, developer_id, category, permission_group_id))
+            conn.commit()
+
+            # 插入3D重量信息
+            conn.execute('''
+                                INSERT INTO product_3D_weight (product_uid, danse, duose)
+                                VALUES (?, ?, ?)
+                            ''', (uid, danse, duose))
+            conn.commit()
+
+            # 处理图片上传
+            # 读取文件内容并创建 FileStorage 对象
+            with open(image_path, 'rb') as f:
+                file_content = f.read()
+
+            # 创建类似上传文件的 FileStorage 对象
+            file = FileStorage(
+                stream=io.BytesIO(file_content),
+                filename="temp1.xlsx",
+                content_type="file/xlsx"
+            )
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = f"{os.path.splitext(file.filename)[1].lower()}"
+                unique_filename = f"{uuid.uuid4()}{filename}"  # 生成唯一文件名
+                file_dir = os.path.join(app.config['UPLOAD_FOLDER'], uid)
+                os.makedirs(file_dir, exist_ok=True)  # 创建目录（如果不存在）
+
+                # 保存文件
+                filepath = os.path.join(file_dir, unique_filename)
+                # filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+                file.save(filepath)
+                print(f"Saved new image to: {filepath}")  # 调试信息
+
+                # 构建相对路径（如 uploads/UUID_原文件名.png）
+                relative_path = unique_filename
+
+                # 将图片信息保存到 product_images 表中
+                conn.execute('''
+                    INSERT INTO product_images (product_uid, image_url, is_local)
+                    VALUES (?, ?, 1)
+                ''', (uid, relative_path))
+                conn.commit()
+                file_id = conn.execute('''
+                    SELECT id 
+                    FROM product_images
+                    WHERE image_url = ?
+                ''', (relative_path,)).fetchone()
+                image_path_cos = 'image/' + name + '/' + name + str(
+                    file_id['id']) + Path(
+                    relative_path).suffix.lower()
+                image_path_url = tencent_cos.upload_to_cos(filepath, image_path_cos)
+
+                conn.execute('''
+                                INSERT INTO product_images_cos (image_id, image_url)
+                                VALUES (?, ?)
+                            ''', (file_id['id'], image_path_url))
+                conn.commit()
+
+                print(f"Added new image to product_uid: {uid}")  # 调试信息
+
+            conn.close()
+
+            return ('产品添加成功！', 'success')
+            return redirect(url_for('products'))
+        except Exception as e:
+            conn.close()
+            return (f'添加产品时出错：{str(e)}', 'error')
+
+def get_image_path(image_list, key_me):
+    for key, image_path in image_list.items():
+        if key_me == key:
+            return image_path
+    return None
+
+
+@app.route('/add_excel', methods=['GET', 'POST'])
+@login_required
+def add_excel():
+    if 'file' not in request.files:
+        flash('未选择文件！', 'error')
+        return redirect(url_for('add_excel'))
+
+    files = request.files.getlist('file')
+
+    for file in files:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            file.save(tmp_file.name)
+            temp_path = tmp_file.name
+        if file.filename == '':
+            flash('未选择文件！', 'error')
+            return redirect(url_for('add_excel'))
+
+        if file.lower().endswith('.xlsx') :
+            images = excel_export.extract_dispimg_optimized(temp_path)
+            # 使用pandas读取前4列
+            df = pd.read_excel(temp_path, usecols="A:D")  # 只读取A、B、C、D列
+            # 遍历每一行
+            for index, row in df.iterrows():
+                row_num = index + 2  # Excel行号从1开始，加上标题行
+                a_value = row.iloc[0] if len(row) > 0 else None
+                b_value = row.iloc[1] if len(row) > 1 else None
+                c_value = row.iloc[2] if len(row) > 2 else None
+                d_value = row.iloc[3] if len(row) > 3 else None
+                e_value = get_image_path(images, f'E{row_num}')
+                add_product_bg(a_value, b_value, c_value, d_value, e_value)
+
+    return redirect(url_for('add_excel'))
+
+
+
+
+
+
 
 if __name__ == '__main__':
     init_database()

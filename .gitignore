@@ -1,7 +1,9 @@
 __pycache__/
 backups/
 static/uploads/
+static/temp/
 key.py
+temp.py
 *.db
 static/lingxing/*
 !static/lingxing/lingxing.xlsx
