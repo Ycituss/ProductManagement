@@ -40,6 +40,7 @@ UPLOAD_FOLDER = 'static/uploads'
 UPLOAD_FOLDER_3MF = 'static/uploads/3mf'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', '3mf', 'stl'}
 ALLOWED_EXTENSIONS_3MF = {'3mf', 'stl'} # 允许的文件扩展名
+ALLOWED_EXTENSIONS_EXCEL = {'xlsx', 'xls'} # 允许的文件扩展名
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['UPLOAD_FOLDER_3MF'] = UPLOAD_FOLDER_3MF
 # 确保上传文件夹存在
@@ -213,6 +214,10 @@ def allowed_file(filename):
 def allowed_file_3mf(filename):
     return '.' in filename and \
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_3MF
+
+def allowed_file_excel(filename):
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_EXCEL
 
 
 # 生成基于时间戳和UUID的唯一标识符
@@ -1790,9 +1795,9 @@ def add_product_bg(name, short_name, danse, duose, image_path):
             file = FileStorage(
                 stream=io.BytesIO(file_content),
                 filename="temp1.xlsx",
-                content_type="file/xlsx"
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-            if file and file.filename != '' and allowed_file(file.filename):
+            if file and file.filename != '' and allowed_file_excel(file.filename):
                 filename = f"{os.path.splitext(file.filename)[1].lower()}"
                 unique_filename = f"{uuid.uuid4()}{filename}"  # 生成唯一文件名
                 file_dir = os.path.join(app.config['UPLOAD_FOLDER'], uid)
@@ -1840,7 +1845,7 @@ def add_product_bg(name, short_name, danse, duose, image_path):
             return (f'添加产品时出错：{str(e)}', 'error')
 
 def get_image_path(image_list, key_me):
-    for key, image_path in image_list.items():
+    for key, image_path in image_list:
         if key_me == key:
             return image_path
     return None
@@ -1849,35 +1854,65 @@ def get_image_path(image_list, key_me):
 @app.route('/add_excel', methods=['GET', 'POST'])
 @login_required
 def add_excel():
-    if 'file' not in request.files:
-        flash('未选择文件！', 'error')
-        return redirect(url_for('add_excel'))
-
-    files = request.files.getlist('file')
-
-    for file in files:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
-            file.save(tmp_file.name)
-            temp_path = tmp_file.name
-        if file.filename == '':
+    # ===================== POST 请求处理（文件上传） =====================
+    if request.method == 'POST':
+        # 检查文件是否提交
+        if 'file' not in request.files:
             flash('未选择文件！', 'error')
             return redirect(url_for('add_excel'))
 
-        if file.lower().endswith('.xlsx') :
-            images = excel_export.extract_dispimg_optimized(temp_path)
-            # 使用pandas读取前4列
-            df = pd.read_excel(temp_path, usecols="A:D")  # 只读取A、B、C、D列
-            # 遍历每一行
-            for index, row in df.iterrows():
-                row_num = index + 2  # Excel行号从1开始，加上标题行
-                a_value = row.iloc[0] if len(row) > 0 else None
-                b_value = row.iloc[1] if len(row) > 1 else None
-                c_value = row.iloc[2] if len(row) > 2 else None
-                d_value = row.iloc[3] if len(row) > 3 else None
-                e_value = get_image_path(images, f'E{row_num}')
-                add_product_bg(a_value, b_value, c_value, d_value, e_value)
+        files = request.files.getlist('file')
+        if not files or all(f.filename == '' for f in files):
+            flash('未选择文件！', 'error')
+            return redirect(url_for('add_excel'))
 
-    return redirect(url_for('add_excel'))
+        # 处理每个文件
+        for file in files:
+            if file.filename == '':
+                continue
+
+            # 修复1：用 filename.lower() 而不是 file.lower()
+            if not file.filename.lower().endswith('.xlsx'):
+                continue
+
+            # 修复2：清理临时文件
+            import atexit
+            import os
+            import uuid
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                file.save(tmp_file.name)
+                temp_path = tmp_file.name
+
+            # 注册清理函数
+            def cleanup_temp():
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            atexit.register(cleanup_temp)
+
+            try:
+                # 处理Excel数据
+                images = excel_export.extract_dispimg_optimized(temp_path)
+                df = pd.read_excel(temp_path, usecols="A:D")
+
+                for index, row in df.iterrows():
+                    row_num = index + 2  # Excel行号从1开始，加上标题行
+                    a_value = row.iloc[0] if len(row) > 0 else None
+                    b_value = row.iloc[1] if len(row) > 1 else None
+                    c_value = row.iloc[2] if len(row) > 2 else None
+                    d_value = row.iloc[3] if len(row) > 3 else None
+                    e_value = get_image_path(images, f'E{row_num}') or ''  # 修复3：处理None
+                    add_product_bg(a_value, b_value, c_value, d_value, e_value)
+
+                flash(f'文件 {file.filename} 处理成功！', 'success')
+            except Exception as e:
+                flash(f'处理文件 {file.filename} 时出错：{str(e)}', 'error')
+
+        # ===================== 关键修复：跳转到与表单无关的页面 =====================
+        return redirect(url_for('products'))  # 跳转到产品列表页，与/add_product一致！
+
+    # ===================== GET 请求处理（显示表单） =====================
+    return render_template('add_excel.html')
 
 
 

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}新增产品 - 电商产品管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-plus"></i> 上传表格</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="uploadForm" method="POST" enctype="multipart/form-data">
+
+            <!-- 表格上传 -->
+            <div class="mb-3">
+                <label for="file" class="form-label">表格</label>
+                <input type="file" class="form-control" id="file" name="file" multiple accept="file/*">
+                <div class="form-text">请上传指定表格</div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">上传表格</button>
+                <a href="{{ url_for('products') }}" class="btn btn-outline-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- 加载中模态框 -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">上传中...</span>
+        </div>
+        <p class="mt-2">正在上传表格，请稍候...</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('uploadForm').addEventListener('submit', function (e) {
+        var myModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        myModal.show();
+    });
+});
+</script>
+{% endblock %}
