@@ -60,9 +60,9 @@
                 <select class="form-select" id="permission_group_id" name="permission_group_id">
                     {% for group in permission_groups %}
                         {% if loop.index == 1 %} {# 第一个数据选项是循环的第2项（因为"无"是第1项） #}
-                            <option value="{{ group.group_id }}" selected>{{ group.group_name }}</option>
-                        {% else %}
                             <option value="{{ group.group_id }}">{{ group.group_name }}</option>
+                        {% else %}
+                            <option value="{{ group.group_id }}" selected>{{ group.group_name }}</option>
                         {% endif %}
                     {% endfor %}
                 </select>

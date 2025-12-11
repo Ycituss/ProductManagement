@@ -516,7 +516,7 @@ def products():
     search_term = request.args.get('search', '')
     category = request.args.get('category', '')
     page = request.args.get('page', 1, type=int)
-    per_page = 6  # 每页显示6个产品卡片
+    per_page = 30  # 每页显示6个产品卡片
 
     # 构建 COUNT 查询（仅统计产品，无需关联 users 表）
     count_query = '''
