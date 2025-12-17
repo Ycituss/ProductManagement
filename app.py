@@ -515,6 +515,7 @@ def products():
     conn = get_db_connection()
     search_term = request.args.get('search', '')
     category = request.args.get('category', '')
+    developer_username = request.args.get('developer_username', '')
     page = request.args.get('page', 1, type=int)
     per_page = 30  # 每页显示6个产品卡片
 
@@ -533,6 +534,12 @@ def products():
     if category:
         count_query += ' AND p.category = ?'
         count_params.append(category)
+
+    if developer_username:
+        developer_id = conn.execute('SELECT user_id FROM users WHERE username = ?', (developer_username,)).fetchone()
+        if developer_id:
+            count_query += ' AND p.developer_id = ?'
+            count_params.append(developer_id[0])
 
     if not session.get('is_admin'):
         if '开发者' in session.get('groups', []):
@@ -562,6 +569,12 @@ def products():
         query += ' AND p.category = ?'
         params.append(category)
 
+    if developer_username:
+        developer_id = conn.execute('SELECT user_id FROM users WHERE username = ?', (developer_username,)).fetchone()
+        if developer_id:
+            query += ' AND p.developer_id = ?'
+            params.append(developer_id[0])
+
     if not session.get('is_admin'):
         query += ' AND (p.developer_id = ? OR p.permission_group_id = ?)'
         params.extend([session['user_id'], 2])
@@ -575,6 +588,15 @@ def products():
 
     # 获取所有分类
     categories = conn.execute('SELECT DISTINCT category FROM products').fetchall()
+
+    # 获取所有开发者名字
+    results = conn.execute('''
+        SELECT DISTINCT u.username
+        FROM products p
+        JOIN users u ON p.developer_id = u.user_id
+        ORDER BY u.username
+        ''').fetchall()
+    developer_usernames = [row[0] for row in results]
 
     # 获取查询结果后，转换为普通字典列表
     products = []
@@ -655,7 +677,9 @@ def products():
                            user_list = user_list,
                            permission_list = permission_list,
                            search_term=search_term,
-                           category=category,
+                           category_filter=category,
+                           developer_usernames=developer_usernames,
+                           developer_username_filter=developer_username,
                            categories=[cat['category'] for cat in categories],
                            page=page,
                            per_page=per_page,

@@ -41,7 +41,18 @@
                 <select class="form-select" id="category" name="category">
                     <option value="">所有分类</option>
                     {% for category in categories %}
-                    <option value="{{ category }}" {% if category == category %}selected{% endif %}>{{ category }}</option>
+                    <option value="{{ category }}" {% if category == category_filter %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="developer_username" class="form-label">开发者</label>
+                <select class="form-select" id="developer_username" name="developer_username">
+                    <option value="">所有开发者</option>
+                    {% for username in developer_usernames %}
+                    <option value="{{ username }}" {% if username == developer_username_filter %}selected{% endif %}>
+                        {{ username }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
@@ -578,12 +589,12 @@
     <ul class="pagination justify-content-center">
         {% if page > 1 %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=1, search=search_term, category=category) }}" aria-label="首页">
+            <a class="page-link" href="{{ url_for('products', page=1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="首页">
                 <i class="fas fa-angle-double-left"></i>
             </a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=page-1, search=search_term, category=category) }}" aria-label="上一页">
+            <a class="page-link" href="{{ url_for('products', page=page-1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="上一页">
                 <i class="fas fa-angle-left"></i>
             </a>
         </li>
@@ -596,19 +607,19 @@
             </li>
             {% else %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('products', page=p, search=search_term, category=category) }}">{{ p }}</a>
+                <a class="page-link" href="{{ url_for('products', page=p, search=search_term, category=category, developer_username=developer_username) }}">{{ p }}</a>
             </li>
             {% endif %}
         {% endfor %}
 
         {% if page < total_pages %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=page+1, search=search_term, category=category) }}" aria-label="下一页">
+            <a class="page-link" href="{{ url_for('products', page=page+1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="下一页">
                 <i class="fas fa-angle-right"></i>
             </a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=total_pages, search=search_term, category=category) }}" aria-label="末页">
+            <a class="page-link" href="{{ url_for('products', page=total_pages, search=search_term, category=category, developer_username=developer_username) }}" aria-label="末页">
                 <i class="fas fa-angle-double-right"></i>
             </a>
         </li>
