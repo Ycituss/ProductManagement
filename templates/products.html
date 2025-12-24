@@ -569,6 +569,7 @@
                         <a href="{{ url_for('get_lingxing_excel_jump', uid=product.uid) }}" target="_blank" onclick="return startDownload(event, {{product.uid}})" class="btn btn-primary">导出领星表格</a>
                         {% if session.is_admin or product.developer_id == session.user_id %}
                         <a href="{{ url_for('edit_product', uid=product.uid) }}" class="btn btn-primary">修改产品</a>
+                        <a href="{{ url_for('delete_product', uid=product.uid) }}" class="btn btn-danger">删除产品</a>
                         {% endif %}
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                     </div>
