@@ -817,7 +817,7 @@ def add_product():
     return render_template('add_product.html',
                            current_danse=current_costs['danse_unit_cost'] if current_costs else '',
                            current_duose=current_costs['duose_unit_cost'] if current_costs else '',
-                           developer_id=developer_id,
+                           developer_id=session['user_id'],
                            permission_groups = permission_groups,
                            product_3D_weight = product_3D_weight)
 
