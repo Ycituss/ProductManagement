@@ -51,7 +51,7 @@
             <!-- 分类 -->
             <div class="mb-3">
                 <label for="category" class="form-label">分类 *</label>
-                <input type="text" class="form-control" id="category" name="category" value="1" required>
+                <input type="text" class="form-control" id="category" name="category" value="{{ '淘宝' if developer_id is defined and developer_id == 3 else '1' }}" required>
             </div>
 
             <!-- 权限组 -->
