@@ -101,6 +101,10 @@
   </div>
 </div>
 <script>
+
+const DANSE_UNIT_COST = {{ current_danse | default(0.12) }};
+const DUOSE_UNIT_COST = {{ current_duose | default(0.13) }};
+
 function getWeight() {
     {% if product_3D_weight %}
         {% for weight in product_3D_weight %}
@@ -119,7 +123,7 @@ function calculateCost() {
     const duose = parseFloat(document.getElementById('duose').value) || 0;
 
     // 计算成本：单色×0.15 + 多色×0.2
-    const cost = danse * 0.15 + duose * 0.2;
+    const cost = danse * DANSE_UNIT_COST + duose * DUOSE_UNIT_COST;
 
     // 保留2位小数
     if (cost !== 0) {

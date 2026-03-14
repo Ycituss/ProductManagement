@@ -7,3 +7,4 @@ temp.py
 *.db
 static/lingxing/*
 !static/lingxing/lingxing.xlsx
+.venv/

@@ -178,6 +178,19 @@ def init_database():
                 FOREIGN KEY (product_uid) REFERENCES products(uid) ON DELETE CASCADE,
                 FOREIGN KEY (listed_by) REFERENCES users(user_id)
             )"""
+
+            """CREATE TABLE cost_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                config_code TEXT NOT NULL UNIQUE,  
+                danse_unit_cost REAL NOT NULL DEFAULT 0.12,
+                duose_unit_cost REAL NOT NULL DEFAULT 0.13,
+                description TEXT,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER,
+                FOREIGN KEY (created_by) REFERENCES users(user_id)
+            )""",
         ]
 
         for statement in sql_statements:
@@ -193,6 +206,10 @@ def init_database():
                        ('仅自己可查看', '仅自己拥有产品查看权限'))
         cursor.execute("INSERT INTO permission_groups (group_name, description) VALUES (?, ?)",
                        ('所有人可查看', '所有人都可以查看自己开发的产品'))
+
+        # 创建默认成本
+        cursor.execute("INSERT INTO cost_config (config_code, danse_unit_cost, duose_unit_cost, description, created_by) VALUES (?, ?, ?, ?, ?)",
+                       ('250213', 0.12, 0.13, '初始默认配置', 1))
 
         conn.commit()
 
@@ -783,9 +800,17 @@ def add_product():
     conn = get_db_connection()
     permission_groups = conn.execute('SELECT * FROM permission_groups').fetchall()
     product_3D_weight = conn.execute('SELECT * FROM product_3D_weight').fetchall()
+    current_costs = conn.execute('''
+            SELECT danse_unit_cost, duose_unit_cost 
+            FROM cost_config 
+            WHERE config_code = '250213' 
+            LIMIT 1
+        ''').fetchone()
     conn.close()
 
     return render_template('add_product.html',
+                           current_danse=current_costs['danse_unit_cost'] if current_costs else '',
+                           current_duose=current_costs['duose_unit_cost'] if current_costs else '',
                            permission_groups = permission_groups,
                            product_3D_weight = product_3D_weight)
 
@@ -895,9 +920,17 @@ def edit_product(uid):
     # 获取权限组列表
     permission_groups = conn.execute('SELECT * FROM permission_groups').fetchall()
     product_3D_weight = conn.execute('SELECT * FROM product_3D_weight').fetchall()
+    current_costs = conn.execute('''
+                SELECT danse_unit_cost, duose_unit_cost 
+                FROM cost_config 
+                WHERE config_code = '250213' 
+                LIMIT 1
+            ''').fetchone()
     conn.close()
 
     return render_template('edit_product.html',
+                           current_danse=current_costs['danse_unit_cost'] if current_costs else '',
+                           current_duose=current_costs['duose_unit_cost'] if current_costs else '',
                            product=product,
                            permission_groups=permission_groups,
                            product_3D_weight=product_3D_weight)
@@ -998,13 +1031,87 @@ def admin_panel():
         ORDER BY u.username, pg.group_name
     ''').fetchall()
 
+    current_costs = conn.execute('''
+        SELECT danse_unit_cost, duose_unit_cost 
+        FROM cost_config 
+        WHERE config_code = '250213' 
+        LIMIT 1
+    ''').fetchone()
+
     conn.close()
 
     return render_template('admin.html',
                            users=users,
                            groups=groups,
+                           current_danse=current_costs['danse_unit_cost'] if current_costs else '',
+                           current_duose=current_costs['duose_unit_cost'] if current_costs else '',
                            user_groups_data=user_groups_data)
 
+
+@app.route('/update_costs', methods=['POST'])
+@login_required
+@admin_required
+def update_costs():
+    # 获取表单数据
+    dansechengben = request.form.get('dansechengben', type=float)
+    duosechengben = request.form.get('duosechengben', type=float)
+
+    # 验证数据
+    if dansechengben is None or duosechengben is None:
+        flash('请输入有效的成本数值！', 'error')
+        return redirect(url_for('admin_panel'))
+
+    if dansechengben < 0 or duosechengben < 0:
+        flash('成本不能为负数！', 'error')
+        return redirect(url_for('admin_panel'))
+
+    try:
+        conn = get_db_connection()
+
+        # 获取所有有3D重量数据的产品
+        products_with_weight = conn.execute('''
+                    SELECT p.uid, p.name, pw.danse, pw.duose
+                    FROM products p
+                    INNER JOIN product_3D_weight pw ON p.uid = pw.product_uid
+                    WHERE pw.danse IS NOT NULL AND pw.duose IS NOT NULL
+                ''').fetchall()
+
+        # 计算并更新每个产品的成本
+        updated_count = 0
+        for product in products_with_weight:
+            new_cost = (product['danse'] * dansechengben +
+                        product['duose'] * duosechengben)
+
+            conn.execute('''
+                        UPDATE products 
+                        SET cost = ?, updated_at = CURRENT_TIMESTAMP 
+                        WHERE uid = ?
+                    ''', (new_cost, product['uid']))
+
+            updated_count += 1
+
+        # 同时更新单色成本和多色成本字段（如果产品表有这些字段）
+        # 如果产品表没有这些字段，可以跳过这部分
+        # conn.execute('UPDATE products SET dansechengben = ?', (danse_unit_cost,))
+        # conn.execute('UPDATE products SET duosechengben = ?', (duose_unit_cost,))
+
+        conn.execute('''
+            UPDATE cost_config 
+            SET danse_unit_cost = ?, 
+                duose_unit_cost = ?, 
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE config_code = ?
+        ''', (dansechengben, duosechengben, '250213'))
+
+        conn.commit()
+        conn.close()
+
+        flash(f'成本更新成功！单色成本: {dansechengben}, 多色成本: {duosechengben}', 'success')
+
+    except Exception as e:
+        flash(f'更新失败：{str(e)}', 'error')
+
+    return redirect(url_for('admin_panel'))
 
 # 静态文件访问，例如上传的图片
 @app.route('/uploads/<product_uid>/<filename>')
@@ -1128,7 +1235,8 @@ def add_image(product_uid):
                 FROM product_images
                 WHERE image_url = ?
             ''', (relative_path,)).fetchone()
-            image_path_cos = 'image/' + product['name'] + '/' + product['name'] + str(file_id['id']) + Path(relative_path).suffix.lower()
+            safe_product_name = re.sub(r'[^\w\u4e00-\u9fa5.-]', '_', product['name'])
+            image_path_cos = 'image/' + safe_product_name + '/' + safe_product_name + str(file_id['id']) + Path(relative_path).suffix.lower()
             image_path_url = tencent_cos.upload_to_cos(filepath, image_path_cos)
 
             conn.execute('''
