@@ -28,6 +28,12 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from pypinyin import lazy_pinyin
 
+import sys
+
+# 强制标准输出使用 UTF-8 编码
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # 请更改为安全的随机密钥，建议使用环境变量
