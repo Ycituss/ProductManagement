@@ -57,6 +57,14 @@
                 </select>
             </div>
             <div class="col-md-3">
+                <label for="has_images" class="form-label">是否有图片</label>
+                <select class="form-select" id="has_images" name="has_images">
+                    <option value="">所有产品</option>
+                    <option value="1" {% if has_images == '1' %}selected{% endif %}>是</option>
+                    <option value="0" {% if has_images == '0' %}selected{% endif %}>否</option>
+                </select>
+            </div>
+            <div class="col-md-3">
                 <label for="submit" class="form-label">&nbsp;</label>
                 <div>
                     <button type="submit" class="btn btn-primary me-2">搜索</button>

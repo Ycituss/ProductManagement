@@ -539,6 +539,7 @@ def products():
     search_term = request.args.get('search', '')
     category = request.args.get('category', '')
     developer_username = request.args.get('developer_username', '')
+    has_images = request.args.get('has_images', '')
     page = request.args.get('page', 1, type=int)
     per_page = 30  # 每页显示6个产品卡片
 
@@ -563,6 +564,22 @@ def products():
         if developer_id:
             count_query += ' AND p.developer_id = ?'
             count_params.append(developer_id[0])
+
+    if has_images in ('0', '1'):
+        if has_images == '1':
+            count_query += '''
+                AND EXISTS (
+                    SELECT 1 FROM product_images pi
+                    WHERE pi.product_uid = p.uid AND pi.is_deleted = 0
+                )
+            '''
+        else:
+            count_query += '''
+                AND NOT EXISTS (
+                    SELECT 1 FROM product_images pi
+                    WHERE pi.product_uid = p.uid AND pi.is_deleted = 0
+                )
+            '''
 
     if not session.get('is_admin'):
         if '开发者' in session.get('groups', []):
@@ -597,6 +614,23 @@ def products():
         if developer_id:
             query += ' AND p.developer_id = ?'
             params.append(developer_id[0])
+
+    # ✅ 是否包含图片（主查询）
+    if has_images in ('0', '1'):
+        if has_images == '1':
+            query += '''
+                AND EXISTS (
+                    SELECT 1 FROM product_images pi
+                    WHERE pi.product_uid = p.uid AND pi.is_deleted = 0
+                )
+            '''
+        else:
+            query += '''
+                AND NOT EXISTS (
+                    SELECT 1 FROM product_images pi
+                    WHERE pi.product_uid = p.uid AND pi.is_deleted = 0
+                )
+            '''
 
     if not session.get('is_admin'):
         query += ' AND (p.developer_id = ? OR p.permission_group_id = ?)'
@@ -702,6 +736,7 @@ def products():
                            search_term=search_term,
                            category_filter=category,
                            developer_usernames=developer_usernames,
+                           has_images=has_images,
                            developer_username_filter=developer_username,
                            categories=[cat['category'] for cat in categories],
                            page=page,
