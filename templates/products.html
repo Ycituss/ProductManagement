@@ -596,14 +596,20 @@
 {% if total_pages > 1 %}
 <nav aria-label="产品分页">
     <ul class="pagination justify-content-center">
+
+
         {% if page > 1 %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="首页">
+            {% set args1 = dict(request.args) %}
+            {% set _ = args1.update({'page': 1}) %}
+            <a class="page-link" href="{{ url_for('products', **args1) }}" aria-label="首页">
                 <i class="fas fa-angle-double-left"></i>
             </a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=page-1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="上一页">
+            {% set args2 = dict(request.args) %}
+            {% set _ = args2.update({'page': page-1}) %}
+            <a class="page-link" href="{{ url_for('products', **args2) }}" aria-label="上一页">
                 <i class="fas fa-angle-left"></i>
             </a>
         </li>
@@ -616,19 +622,25 @@
             </li>
             {% else %}
             <li class="page-item">
-                <a class="page-link" href="{{ url_for('products', page=p, search=search_term, category=category, developer_username=developer_username) }}">{{ p }}</a>
+            {% set args3 = dict(request.args) %}
+            {% set _ = args3.update({'page': p}) %}
+                <a class="page-link" href="{{ url_for('products', **args3) }}">{{ p }}</a>
             </li>
             {% endif %}
         {% endfor %}
 
         {% if page < total_pages %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=page+1, search=search_term, category=category, developer_username=developer_username) }}" aria-label="下一页">
+            {% set args4 = dict(request.args) %}
+            {% set _ = args4.update({'page': page+1}) %}
+            <a class="page-link" href="{{ url_for('products', **args4) }}" aria-label="下一页">
                 <i class="fas fa-angle-right"></i>
             </a>
         </li>
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('products', page=total_pages, search=search_term, category=category, developer_username=developer_username) }}" aria-label="末页">
+            {% set args5 = dict(request.args) %}
+            {% set _ = args5.update({'page': total_pages}) %}
+            <a class="page-link" href="{{ url_for('products', **args5) }}" aria-label="末页">
                 <i class="fas fa-angle-double-right"></i>
             </a>
         </li>
