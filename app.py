@@ -397,6 +397,25 @@ def index():
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+# 读取txt文件内容返回纯文本
+@app.route("/api/PddPictureVersion")
+def get_version_txt():
+    try:
+        with open("./static/api/server.version", "r", encoding="utf-8") as f:
+            content = f.read()
+        # 指定文本类型，浏览器正常显示
+        return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+    except FileNotFoundError:
+        return "文件不存在", 404
+    except Exception as e:
+        return f"读取失败：{str(e)}", 500
+
+# /api/server.exe
+@app.route('/api/server.exe')
+def download_server_exe():
+    # 返回exe文件，浏览器自动下载
+    return send_file("./static/api/server.exe", as_attachment=True)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

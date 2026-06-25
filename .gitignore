@@ -1,6 +1,7 @@
 __pycache__/
 backups/
 static/uploads/
+static/api/
 static/temp/
 key.py
 temp.py
