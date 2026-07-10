@@ -397,6 +397,18 @@ def index():
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+@app.route("/api/variation_pools.json")
+def get_variation_pools():
+    try:
+        with open("./static/api/variation_pools.json", "r", encoding="utf-8") as f:
+            content = f.read()
+        # 指定文本类型，浏览器正常显示
+        return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+    except FileNotFoundError:
+        return "文件不存在", 404
+    except Exception as e:
+        return f"读取失败：{str(e)}", 500
+
 # 读取txt文件内容返回纯文本
 @app.route("/api/PddPictureVersion")
 def get_version_txt():
