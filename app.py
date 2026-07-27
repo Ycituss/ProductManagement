@@ -409,6 +409,27 @@ def get_variation_pools():
     except Exception as e:
         return f"读取失败：{str(e)}", 500
 
+@app.route('/api/update/<path:filename>')
+def serve_update(filename):
+    UPDATE_DIR = "./static/api/update"
+    os.makedirs(UPDATE_DIR, exist_ok=True)
+    file_path = os.path.join(UPDATE_DIR, filename)
+
+    if not os.path.exists(file_path):
+        abort(404)
+
+    # ====== 支持 Range 请求（blockmap 增量更新必须）======
+    response = send_from_directory(
+        UPDATE_DIR,
+        filename,
+        as_attachment=False,
+        conditional=True,  # ✅ 关键：开启 Range 支持
+    )
+
+    # 显式声明支持字节范围
+    response.headers['Accept-Ranges'] = 'bytes'
+    return response
+
 # 读取txt文件内容返回纯文本
 @app.route("/api/PddPictureVersion")
 def get_version_txt():
