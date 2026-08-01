@@ -30,6 +30,8 @@ from pypinyin import lazy_pinyin
 
 import sys
 
+from api_key import get_keys
+
 # 强制标准输出使用 UTF-8 编码
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
@@ -448,6 +450,10 @@ def get_version_txt():
 def download_server_exe():
     # 返回exe文件，浏览器自动下载
     return send_file("./static/api/server.exe", as_attachment=True)
+
+@app.route('/api/get_api_keys',  methods=["GET"])
+def get_api_keys():
+    return get_keys()
 
 
 @app.route('/login', methods=['GET', 'POST'])
