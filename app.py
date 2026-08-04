@@ -30,7 +30,7 @@ from pypinyin import lazy_pinyin
 
 import sys
 
-from api_key import get_keys
+from api_key import get_keys, unbind_key
 
 # 强制标准输出使用 UTF-8 编码
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -454,6 +454,11 @@ def download_server_exe():
 @app.route('/api/get_api_keys',  methods=["GET"])
 def get_api_keys():
     return get_keys()
+
+@app.route("/admin/unbind-key", methods=["get"])
+@admin_required
+def api_unbind():
+    return unbind_key()
 
 
 @app.route('/login', methods=['GET', 'POST'])
