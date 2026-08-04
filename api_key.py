@@ -227,7 +227,7 @@ def unbind_key():
             </head>
             <body>
             <div class="card">
-                <h2 class="error-title">❌ Key不存在，解绑失败</h2>
+                <h2 class="error-title">❌ Key未使用过或不存在，解绑失败</h2>
                 <p class="text">API Key：{api_key}</p>
                 <a class="back" href="/admin/unbind-key">返回页面</a>
             </div>
