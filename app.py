@@ -1015,7 +1015,18 @@ def add_product_batch():
         return redirect(request.url)
 
     # GET：页面
-    return render_template('add_product_batch.html')
+    conn = get_db_connection()
+    current_costs = conn.execute('''
+                    SELECT danse_unit_cost, duose_unit_cost 
+                    FROM cost_config 
+                    WHERE config_code = '250213' 
+                    LIMIT 1
+                ''').fetchone()
+    conn.close()
+
+    return render_template('add_product_batch.html',
+                           current_danse=current_costs['danse_unit_cost'] if current_costs else '',
+                           current_duose=current_costs['duose_unit_cost'] if current_costs else '')
 
 @app.route('/add_product_batch/preview', methods=['POST'])
 @login_required

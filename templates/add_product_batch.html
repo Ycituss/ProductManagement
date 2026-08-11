@@ -74,11 +74,20 @@ window.API = {
     const previewBox = document.getElementById('previewBox');
     const msg       = document.getElementById('msg');
     const API       = window.API;
+    const DANSE_UNIT_COST = Number({{ current_danse | default(0.12) }});
+    const DUOSE_UNIT_COST = Number({{ current_duose | default(0.13) }});
 
     let lastRows = [];
 
     function showMsg(text) {
         msg.innerHTML = `<div class="alert alert-info py-2 mb-0">${text}</div>`;
+    }
+
+    // 预估成本：单色×单色单价 + 多色×多色单价，保留 2 位小数
+    function calcEstimatedCost(danse, duose) {
+        const d = Number(danse) || 0;
+        const u = Number(duose) || 0;
+        return (d * DANSE_UNIT_COST + u * DUOSE_UNIT_COST).toFixed(2);
     }
 
     function renderTable(headers, rows) {
@@ -94,6 +103,7 @@ window.API = {
             const star = required.includes(h) ? ' <span class="text-danger">*</span>' : '';
             html += `<th>${h}${star}</th>`;
         });
+        html += '<th class="bg-warning text-dark text-center" style="white-space:nowrap;">预估成本 (元)</th>';
         html += '<th>校验</th></tr></thead><tbody>';
 
         rows.forEach(r => {
@@ -101,11 +111,16 @@ window.API = {
                 ? '缺：' + r._warn.join(',')
                 : 'OK';
             const cls = warn === 'OK' ? '' : 'table-warning';
+
+            // 计算并回写，供导入时透传
+            r.estimated_cost = calcEstimatedCost(r.danse, r.duose);
+
             html += `<tr class="${cls}">`;
             headers.forEach(h => {
                 const v = (r[h] == null) ? '' : r[h];
                 html += `<td>${v}</td>`;
             });
+            html += `<td class="text-center fw-bold text-primary bg-light">¥${r.estimated_cost}</td>`;
             html += `<td>${warn}</td></tr>`;
         });
 
