@@ -27,6 +27,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 from pypinyin import lazy_pinyin
+from decimal import Decimal, ROUND_HALF_UP
+
 
 import sys
 
@@ -830,8 +832,12 @@ def add_product():
         # 检查SKU是否已存在
         conn = get_db_connection()
         existing_sku = conn.execute('SELECT * FROM products WHERE sku = ?', (sku,)).fetchone()
+        existing_name = conn.execute('SELECT 1 FROM products WHERE name = ?', (name,)).fetchone()
         if existing_sku:
             flash('SKU已存在！请使用不同的SKU。', 'error')
+            conn.close()
+        elif existing_name:
+            flash('存在同名产品！请使用不同的产品名。', 'error')
             conn.close()
         else:
             try:
@@ -919,6 +925,150 @@ def add_product():
                            permission_groups = permission_groups,
                            product_3D_weight = product_3D_weight)
 
+@app.route('/add_product_batch', methods=['GET', 'POST'])
+@login_required
+def add_product_batch():
+    skipped_rows = []
+
+    if request.method == 'POST':
+        # ✅ 表单提交（确认导入）
+        if request.form.get('rows'):
+            import json
+            rows = json.loads(request.form.get('rows'))
+
+            if not rows:
+                flash('没有可导入的数据', 'error')
+                return redirect(request.url)
+
+            conn = get_db_connection()
+            conn.execute('BEGIN')
+
+            try:
+                for row in rows:
+                    name = row.get('name')
+                    category = row.get('category') or "淘宝"
+
+                    if not name:
+                        continue
+
+                    if conn.execute(
+                        'SELECT 1 FROM products WHERE name = ?', (name,)
+                    ).fetchone():
+                        skipped_rows.append(name)
+                        continue
+
+                    uid = generate_product_uid()
+                    danse = Decimal(str(row.get('danse') or 0))
+                    duose = Decimal(str(row.get('duose') or 0))
+
+                    current_costs = conn.execute('''
+                        SELECT danse_unit_cost, duose_unit_cost 
+                        FROM cost_config 
+                        WHERE config_code = '250213' 
+                        LIMIT 1
+                    ''').fetchone()
+
+                    current_danse = Decimal(str(current_costs['danse_unit_cost'])) if current_costs else Decimal('0.12')
+                    current_duose = Decimal(str(current_costs['duose_unit_cost'])) if current_costs else Decimal('0.13')
+
+                    # ✅ 成本计算 + 强制 2 位小数（四舍五入）
+                    cost = (danse * current_danse + duose * current_duose).quantize(
+                        Decimal('0.00'),
+                        rounding=ROUND_HALF_UP
+                    )
+                    conn.execute('''
+                        INSERT INTO products
+                        (uid, name, short_name, sku, cost, developer_id, category, permission_group_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        uid, name,
+                        row.get('short_name', ''),
+                        uid,
+                        float(cost),
+                        session['user_id'],
+                        category or "淘宝",
+                        row.get('permission_group_id') or 2
+                    ))
+
+                    conn.execute('''
+                        INSERT INTO product_3D_weight (product_uid, danse, duose)
+                        VALUES (?, ?, ?)
+                    ''', (uid, float(danse), float(duose)))
+
+                conn.commit()
+                conn.close()
+
+                if skipped_rows:
+                    flash(f'已跳过同名产品：{", ".join(skipped_rows)}', 'warning')
+
+                flash('批量导入成功', 'success')
+                return redirect(url_for('products'))
+
+            except Exception as e:
+                conn.rollback()
+                conn.close()
+                flash(f'批量导入失败：{str(e)}', 'error')
+                return redirect(request.url)
+
+        # ❌ 没有 rows，说明不是合法导入请求
+        flash('非法提交', 'error')
+        return redirect(request.url)
+
+    # GET：页面
+    return render_template('add_product_batch.html')
+
+@app.route('/add_product_batch/preview', methods=['POST'])
+@login_required
+def add_product_batch_preview():
+    f = request.files.get('excel_file')
+    if not f or not f.filename.endswith('.xlsx'):
+        return jsonify({'ok': False, 'msg': '仅支持 .xlsx 文件'}), 400
+
+    try:
+        headers, raw_rows = _parse_product_excel(f)
+
+        rows = []
+        required = ['danse', 'duose']
+
+        for r in raw_rows:
+            name = r.get('name')
+
+            # ✅ name 为空 → 直接丢弃
+            if not name:
+                continue
+
+            # ✅ danse / duose 都为空才标红
+            danse = r.get('danse')
+            duose = r.get('duose')
+
+            r['_warn'] = []
+            if not danse and not duose:
+                r['_warn'] = ['重量为0']
+
+            rows.append(r)
+
+        return jsonify({
+            'ok': True,
+            'headers': headers,
+            'rows': rows
+        })
+
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': str(e)}), 500
+
+def _parse_product_excel(file_storage):
+    """解析上传的 .xlsx，返回 (headers, rows)。rows 为 list[dict]。"""
+    wb = openpyxl.load_workbook(file_storage)
+    ws = wb.active
+    headers = [str(c.value).strip() for c in ws[1] if c.value is not None]
+    rows = []
+    for row in ws.iter_rows(min_row=2):
+        vals = [c.value for c in row]
+        if not any(v is not None and str(v).strip() != "" for v in vals):
+            continue
+        rows.append(dict(zip(headers, vals)))
+    return headers, rows
+
 
 @app.route('/edit_product/<uid>', methods=['GET', 'POST'])
 @login_required
@@ -943,8 +1093,12 @@ def edit_product(uid):
 
         # 检查SKU是否与其他产品冲突
         existing_sku = conn.execute('SELECT * FROM products WHERE sku = ? AND uid != ?', (sku, uid)).fetchone()
+        existing_name = conn.execute('SELECT 1 FROM products WHERE name = ?', (name,)).fetchone()
         if existing_sku:
             flash('SKU已存在！请使用不同的SKU。', 'error')
+            conn.close()
+        elif existing_name:
+            flash('存在同名产品！请使用不同的产品名。', 'error')
             conn.close()
         else:
             conn.execute('''

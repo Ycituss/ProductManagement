@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}批量新增产品{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-excel"></i> 批量新增产品</h2>
+    <a href="{{ url_for('add_product') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-plus"></i> 单个新增
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+
+        <!-- Excel 选择 -->
+        <div class="mb-3">
+            <label for="excel_file" class="form-label">Excel 文件 *</label>
+            <input type="file" id="excel_file" class="form-control" accept=".xlsx">
+            <div class="form-text">
+                表头需包含：<code>name</code>、<code>short_name</code>、<code>cost</code>、
+                <code>category</code>、<code>permission_group_id</code>、
+                <code>danse</code>、<code>duose</code>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-primary" id="btnPreview">预览</button>
+            <button class="btn btn-success" id="btnImport" disabled>确认导入</button>
+            <a href="{{ url_for('products') }}" class="btn btn-outline-secondary">返回列表</a>
+        </div>
+
+        <!-- 提示区域 -->
+        <div id="msg"></div>
+
+        <!-- 预览表格 -->
+        <div id="previewBox"></div>
+
+        <!-- ✅ 导入表单（无 action = 提交到当前 URL） -->
+        <form id="importForm" method="POST">
+            <input type="hidden" name="rows" id="rowsData">
+        </form>
+    </div>
+</div>
+
+<!-- ✅ 加载中模态框（与 add_product.html 完全一致） -->
+<div class="modal fade" id="loadingModal"
+     tabindex="-1"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">导入中...</span>
+        </div>
+        <p class="mt-2">正在导入，请稍候...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.API = {
+    preview: "{{ url_for('add_product_batch_preview') }}",
+    productsUrl: "{{ url_for('products') }}"
+};
+</script>
+<script>
+    const fileInput  = document.getElementById('excel_file');
+    const btnPreview = document.getElementById('btnPreview');
+    const btnImport  = document.getElementById('btnImport');
+    const previewBox = document.getElementById('previewBox');
+    const msg       = document.getElementById('msg');
+    const API       = window.API;
+
+    let lastRows = [];
+
+    function showMsg(text) {
+        msg.innerHTML = `<div class="alert alert-info py-2 mb-0">${text}</div>`;
+    }
+
+    function renderTable(headers, rows) {
+        const required = ['name'];
+        if (!rows.length) {
+            previewBox.innerHTML = '<div class="text-muted">无有效数据</div>';
+            return;
+        }
+
+        let html = '<div class="table-responsive"><table class="table table-bordered table-sm align-middle">';
+        html += '<thead class="table-light"><tr>';
+        headers.forEach(h => {
+            const star = required.includes(h) ? ' <span class="text-danger">*</span>' : '';
+            html += `<th>${h}${star}</th>`;
+        });
+        html += '<th>校验</th></tr></thead><tbody>';
+
+        rows.forEach(r => {
+            const warn = (r._warn && r._warn.length)
+                ? '缺：' + r._warn.join(',')
+                : 'OK';
+            const cls = warn === 'OK' ? '' : 'table-warning';
+            html += `<tr class="${cls}">`;
+            headers.forEach(h => {
+                const v = (r[h] == null) ? '' : r[h];
+                html += `<td>${v}</td>`;
+            });
+            html += `<td>${warn}</td></tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        previewBox.innerHTML = html;
+    }
+
+    /* ========= 预览 ========= */
+    btnPreview.addEventListener('click', () => {
+        if (!fileInput.files.length) {
+            showMsg('请先选择 Excel 文件');
+            return;
+        }
+
+        const fd = new FormData();
+        fd.append('excel_file', fileInput.files[0]);
+
+        previewBox.innerHTML = '<div class="text-muted">解析中...</div>';
+        btnImport.disabled = true;
+
+        fetch(API.preview, { method: 'POST', body: fd })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.ok) {
+                    previewBox.innerHTML = '';
+                    showMsg(data.msg || '预览失败');
+                    return;
+                }
+                lastRows = data.rows;
+                renderTable(data.headers, data.rows);
+                btnImport.disabled = false;
+                showMsg(`共解析 ${lastRows.length} 行，请确认后导入`);
+            })
+            .catch(() => {
+                previewBox.innerHTML = '';
+                showMsg('预览请求失败');
+            });
+    });
+
+    /* ========= 确认导入（表单提交，flash 生效） ========= */
+    btnImport.addEventListener('click', () => {
+        if (!lastRows.length) return;
+
+        const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
+        modal.show();
+
+        document.getElementById('rowsData').value = JSON.stringify(lastRows);
+        document.getElementById('importForm').submit();
+    });
+</script>
+{% endblock %}
