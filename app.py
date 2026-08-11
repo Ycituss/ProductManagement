@@ -1108,9 +1108,11 @@ def edit_product(uid):
         if existing_sku:
             flash('SKU已存在！请使用不同的SKU。', 'error')
             conn.close()
-        elif existing_name:
+            return redirect(request.url)
+        elif existing_name and name != product['name']:
             flash('存在同名产品！请使用不同的产品名。', 'error')
             conn.close()
+            return redirect(request.url)
         else:
             conn.execute('''
                 UPDATE products 
