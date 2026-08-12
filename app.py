@@ -944,7 +944,7 @@ def add_product_batch():
             conn.execute('BEGIN')
 
             try:
-                for row in rows:
+                for row in reversed(rows):
                     name = row.get('name')
                     category = row.get('category') or "淘宝"
 
